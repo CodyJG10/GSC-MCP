@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+
+# Environment variables
+.env
+
+# Authentication tokens
+token.json
+credentials.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
