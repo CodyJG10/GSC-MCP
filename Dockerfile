@@ -9,7 +9,6 @@ COPY . .
 RUN npm run build
 
 
-
 # Expose the port
 EXPOSE 3000
 
