@@ -78,6 +78,39 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                             },
                             description: 'Dimensions to group results by',
                         },
+                        dimensionFilterGroups: {
+                            type: 'array',
+                            description: 'Filters for the query. See Google Search Console API docs for structure.',
+                            items: {
+                                type: 'object',
+                            }
+                        }
+                    },
+                    required: ['siteUrl', 'startDate', 'endDate'],
+                },
+            },
+            {
+                name: 'get_top_queries',
+                description: 'Get top performing queries for a site',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        siteUrl: {
+                            type: 'string',
+                            description: 'The URL of the property',
+                        },
+                        startDate: {
+                            type: 'string',
+                            description: 'Start date (YYYY-MM-DD)',
+                        },
+                        endDate: {
+                            type: 'string',
+                            description: 'End date (YYYY-MM-DD)',
+                        },
+                        limit: {
+                            type: 'number',
+                            description: 'Number of queries to return (default 10)',
+                        },
                     },
                     required: ['siteUrl', 'startDate', 'endDate'],
                 },
@@ -98,6 +131,38 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         },
                     },
                     required: ['siteUrl', 'inspectionUrl'],
+                },
+            },
+            {
+                name: 'get_sitemaps',
+                description: 'List sitemaps for a site',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        siteUrl: {
+                            type: 'string',
+                            description: 'The URL of the property as defined in Search Console',
+                        },
+                    },
+                    required: ['siteUrl'],
+                },
+            },
+            {
+                name: 'submit_sitemap',
+                description: 'Submit a sitemap for a site',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        siteUrl: {
+                            type: 'string',
+                            description: 'The URL of the property as defined in Search Console',
+                        },
+                        feedpath: {
+                            type: 'string',
+                            description: 'The URL of the sitemap to submit',
+                        },
+                    },
+                    required: ['siteUrl', 'feedpath'],
                 },
             },
         ],
@@ -138,13 +203,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         case 'get_search_analytics': {
-            const { siteUrl, startDate, endDate, dimensions } = request.params.arguments as any;
+            const { siteUrl, startDate, endDate, dimensions, dimensionFilterGroups } = request.params.arguments as any;
             try {
                 const rows = await gscClient!.getSearchAnalytics(
                     siteUrl,
                     startDate,
                     endDate,
-                    dimensions || ['date']
+                    dimensions || ['date'],
+                    dimensionFilterGroups
                 );
                 return {
                     content: [
@@ -158,6 +224,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 throw new McpError(
                     ErrorCode.InternalError,
                     `Failed to get search analytics: ${error instanceof Error ? error.stack : error}`
+                );
+            }
+        }
+
+        case 'get_top_queries': {
+            const { siteUrl, startDate, endDate, limit } = request.params.arguments as any;
+            try {
+                const rows = await gscClient!.getTopQueries(
+                    siteUrl,
+                    startDate,
+                    endDate,
+                    limit
+                );
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: JSON.stringify(rows, null, 2),
+                        },
+                    ],
+                };
+            } catch (error) {
+                throw new McpError(
+                    ErrorCode.InternalError,
+                    `Failed to get top queries: ${error instanceof Error ? error.stack : error}`
                 );
             }
         }
@@ -178,6 +269,46 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 throw new McpError(
                     ErrorCode.InternalError,
                     `Failed to inspect URL: ${error instanceof Error ? error.stack : error}`
+                );
+            }
+        }
+
+        case 'get_sitemaps': {
+            const { siteUrl } = request.params.arguments as any;
+            try {
+                const sitemaps = await gscClient!.listSitemaps(siteUrl);
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: JSON.stringify(sitemaps, null, 2),
+                        },
+                    ],
+                };
+            } catch (error) {
+                throw new McpError(
+                    ErrorCode.InternalError,
+                    `Failed to list sitemaps: ${error instanceof Error ? error.stack : error}`
+                );
+            }
+        }
+
+        case 'submit_sitemap': {
+            const { siteUrl, feedpath } = request.params.arguments as any;
+            try {
+                const result = await gscClient!.submitSitemap(siteUrl, feedpath);
+                return {
+                    content: [
+                        {
+                            type: 'text',
+                            text: JSON.stringify(result, null, 2),
+                        },
+                    ],
+                };
+            } catch (error) {
+                throw new McpError(
+                    ErrorCode.InternalError,
+                    `Failed to submit sitemap: ${error instanceof Error ? error.stack : error}`
                 );
             }
         }

@@ -17,7 +17,8 @@ export class GSCClient {
         siteUrl: string,
         startDate: string,
         endDate: string,
-        dimensions: string[]
+        dimensions: string[],
+        dimensionFilterGroups?: searchconsole_v1.Schema$ApiDimensionFilterGroup[]
     ) {
         const res = await this.searchConsole.searchanalytics.query({
             siteUrl,
@@ -25,6 +26,7 @@ export class GSCClient {
                 startDate,
                 endDate,
                 dimensions,
+                dimensionFilterGroups,
             },
         });
         return res.data.rows || [];
@@ -38,5 +40,33 @@ export class GSCClient {
             },
         });
         return res.data;
+    }
+
+    async listSitemaps(siteUrl: string) {
+        const res = await this.searchConsole.sitemaps.list({
+            siteUrl,
+        });
+        return res.data.sitemap || [];
+    }
+
+    async submitSitemap(siteUrl: string, feedpath: string) {
+        await this.searchConsole.sitemaps.submit({
+            siteUrl,
+            feedpath,
+        });
+        return { success: true, message: `Sitemap submitted: ${feedpath}` };
+    }
+
+    async getTopQueries(siteUrl: string, startDate: string, endDate: string, limit: number = 10) {
+        const res = await this.searchConsole.searchanalytics.query({
+            siteUrl,
+            requestBody: {
+                startDate,
+                endDate,
+                dimensions: ['query'],
+                rowLimit: limit,
+            },
+        });
+        return res.data.rows || [];
     }
 }
